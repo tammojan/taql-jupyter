@@ -1,0 +1,4 @@
+{"argv":["python","-m","taqlkernel", "-f", "{connection_file}"],
+ "name":"taql",
+ "display_name":"TaQL"
+}
