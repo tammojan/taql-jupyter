@@ -59,17 +59,17 @@ class TaQLKernel(Kernel):
             out+=cellout
         return out
 
-    def format_table(self, t, printrows, printcount):
+    def format_table(self, t, printrows, printcount, operation):
         out=""
         # Print number of rows, but not for simple calc expressions
         if printcount or (t.nrows()>=100):
-            out+="Select result of "+str(t.nrows())+" row"
+            out+=operation.capitalize()+" result of "+str(t.nrows())+" row"
             if t.nrows()>1:
                 out+="s\n"
             else:
                 out+="\n"
         # Print column names (not if they are all auto-generated)
-        if not all([colname[:4]=="Col_" for colname in t.colnames()]):
+        if operation=="select" and not(all([colname[:4]=="Col_" for colname in t.colnames()])):
             if t.nrows()>0 and not "\n" in self.format_row(t,t[0]): # Try to get spacing right
                 for colname in t.colnames():
                     firstval=self.format_cell(t[0][colname],t.getcolkeywords(colname))
@@ -93,10 +93,10 @@ class TaQLKernel(Kernel):
             
         return out
 
-    def format_output(self, t, printrows, printcount):
+    def format_output(self, t, printrows, printcount, operation):
         numpy.set_printoptions(precision=5)
         if isinstance(t, pt.table):
-            return self.format_table(t, printrows, printcount)
+            return self.format_table(t, printrows, printcount, operation)
         else:
             return str(t[0])
 
@@ -109,18 +109,28 @@ class TaQLKernel(Kernel):
    
             try:
                 t=pt.taql(code)
+
+                # match the first operation keyword, so that "select * from (update ..." will yield rows
+                m=re.match(".*?((?:select)|(?:update)|(?:insert)|(?:delete)|(?:count)|(?:calc)|(?:create table)|(?:insert)|(?:alter table))",code.lower())
+                if m:
+                    operation=m.group(1)
+                else:
+                    operation="calc"
+                   
                 # Don't display output if code is 'SELECT FROM'
-                printrows=True
-                match = re.match('^.*?select(.*?)from',code, re.IGNORECASE)
-                if match and match.group(1).isspace():
-                    printrows=False
+                printrows=False
+                if operation=="select":
+                    # first select has something between "select" and "from"
+                    match = re.match('^.*?select(.*?)from',code, re.IGNORECASE)
+                    if not(match and match.group(1).isspace()):
+                        printrows=True
 
+                printcount=True
                 # Don't display row count in simple calc-like expressions
-                printcount=False
-                if 'from' in code.lower():
-                    printcount=True
+                if operation=="select" and not('from' in code.lower()):
+                    printcount=False
 
-                output=self.format_output(t,printrows,printcount)
+                output=self.format_output(t,printrows,printcount,operation)
             except RuntimeError as e:
                 myerror=str(e).split('\n')
                 output=""
