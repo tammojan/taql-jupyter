@@ -37,3 +37,5 @@ if 'PASSWORD' in os.environ:
     from IPython.lib import passwd
     c.NotebookApp.password = passwd(os.environ['PASSWORD'])
     del os.environ['PASSWORD']
+
+c.NotebookApp.file_to_run = 'LearnTaQL.ipynb'

@@ -101,14 +101,6 @@ RUN sudo apt-get -y install python-zmq
 RUN sudo pip install jupyter
 
 #
-# install taql kernel
-# 
-RUN cd ${INSTALLDIR} && git clone https://github.com/tammojan/taql-jupyter
-ENV PYTHONPATH /home/lofar/opt/taql-jupyter
-RUN sudo mkdir -p /usr/local/share/jupyter/kernels
-RUN sudo cp -r /home/lofar/opt/taql-jupyter/taql /usr/local/share/jupyter/kernels
-
-#
 # copied from jupyter/minimal-notebook
 #
 USER root
@@ -135,13 +127,22 @@ USER root
 EXPOSE 8888/tcp
 WORKDIR /home/${USER}/work
 #ENTRYPOINT tini
+
+#
+# install taql kernel
+# 
+RUN cd ${INSTALLDIR} && git clone https://github.com/tammojan/taql-jupyter
+ENV PYTHONPATH /home/lofar/opt/taql-jupyter
+RUN sudo mkdir -p /usr/local/share/jupyter/kernels
+RUN sudo cp -r /home/lofar/opt/taql-jupyter/taql /usr/local/share/jupyter/kernels
+
 COPY jupyter_notebook_config.py /home/${USER}/.jupyter/
 ENV NB_USER=${USER}
 COPY start-notebook.sh /usr/local/bin/
 COPY start-notebook.sh /usr/local/bin/
 COPY LearnTaQL.ipynb /home/${NB_USER}/work
-COPY demodata.tgz /home/${USER}/work
-RUN cd /home/${USER}/work && tar xf demodata.tgz
+COPY demodata.tgz /home/${USER}/
+RUN cd /home/${USER}/work && tar xf /home/${USER}/demodata.tgz
 CMD start-notebook.sh /home/${NB_USER}/work/LearnTaQL.ipynb
 RUN chown -R ${USER}:users /home/${NB_USER}/.jupyter
 RUN chown -R ${USER}:users /home/${NB_USER}/.jupyter

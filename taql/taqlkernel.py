@@ -2,6 +2,7 @@
 
 from ipykernel.kernelbase import Kernel
 import casacore.tables as pt
+import casacore.quanta as quanta
 import sys
 import six
 import re
@@ -27,14 +28,33 @@ class TaQLKernel(Kernel):
             out+=str(tmpdict)
             numpy.set_printoptions(formatter=None)
         else:
-            out+=str(val)
+            valtype='other'
+            if colkeywords.get('MEASINFO',{}).get('type')=='epoch' and colkeywords.get('QuantumUnits')==['d']:
+                valtype='epoch'
+                if (val==numpy.floor(val)).all():
+                    # Do not show time part if 0
+                    out+=quanta.quantity(val,'d').formatted('DMY')[0:11]
+                else:
+                    out+=quanta.quantity(val,'d').formatted('DMY')
+            elif colkeywords.get('MEASINFO',{}).get('type')=='direction' and 'QuantumUnits' in colkeywords and (numpy.array(colkeywords['QuantumUnits'])==colkeywords['QuantumUnits'][0]).all() and val.shape==(1,2):
+                    valtype='direction'
+                    out+="["
+                    part=quanta.quantity(val[0,0],'rad').formatted("TIME",precision=9)
+                    part=re.sub(r'(\d+):(\d+):(.*)',r'\1h\2m\3',part)
+                    out+=part+", "
+                    part=quanta.quantity(val[0,1],'rad').formatted("ANGLE",precision=9)
+                    part=re.sub(r'(\d+)\.(\d+)\.(.*)',r'\1d\2m\3',part)
+                    out+=part+"]"
+            else:
+                out+=str(val)
 
-        if 'QuantumUnits' in colkeywords:
+        if 'QuantumUnits' in colkeywords and valtype=='other':
             # Multiple different units for element in an array. TODO: do this properly
             # For now, just print the units and let the user figure out what it means
             if not (numpy.array(colkeywords['QuantumUnits'])==colkeywords['QuantumUnits'][0]).all():
-                out+=str(colkeywords['QuantumUnits'])
-            out+=" "+colkeywords['QuantumUnits'][0]
+                out+=" "+str(colkeywords['QuantumUnits'])
+            else:
+                out+=" "+colkeywords['QuantumUnits'][0]
 
         return out
 
