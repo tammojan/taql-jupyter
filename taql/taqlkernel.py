@@ -18,7 +18,7 @@ class TaQLKernel(Kernel):
 
     def format_cell(self, val, colkeywords):
         out=""
-  
+
         # String arrays are returned as dict, undo that for printing
         if isinstance(val, dict):
             tmpdict=numpy.array(val['array'])
@@ -33,7 +33,7 @@ class TaQLKernel(Kernel):
                 valtype='epoch'
                 if (val==numpy.floor(val)).all():
                     # Do not show time part if 0
-                    out+=quanta.quantity(val,'d').formatted('DMY')[0:11]
+                    out+=quanta.quantity(val,'d').formatted('YMD_ONLY')
                 else:
                     out+=quanta.quantity(val,'d').formatted('DMY')
             elif colkeywords.get('MEASINFO',{}).get('type')=='direction' and 'QuantumUnits' in colkeywords and (numpy.array(colkeywords['QuantumUnits'])==colkeywords['QuantumUnits'][0]).all() and val.shape==(1,2):
@@ -45,6 +45,8 @@ class TaQLKernel(Kernel):
                     part=quanta.quantity(val[0,1],'rad').formatted("ANGLE",precision=9)
                     part=re.sub(r'(\d+)\.(\d+)\.(.*)',r'\1d\2m\3',part)
                     out+=part+"]"
+            elif isinstance(val, numpy.ndarray):
+                out+=numpy.array2string(val,separator=', ')
             else:
                 out+=str(val)
 
@@ -73,7 +75,7 @@ class TaQLKernel(Kernel):
                         previous_cell_was_multiline=True
                         out+="\n"
                     else:
-                        out+="\t" 
+                        out+="\t"
             firstcell=False
 
             out+=cellout
@@ -110,7 +112,9 @@ class TaQLKernel(Kernel):
                 if rowcount>=100:
                     out+=".\n.\n.\n("+str(t.nrows()-100)+" more rows)\n"
                     break
-            
+
+        if out[-2:]=="\n\n":
+            out=out[:-1]
         return out
 
     def format_output(self, t, printrows, printcount, operation):
@@ -123,11 +127,11 @@ class TaQLKernel(Kernel):
     def do_execute(self, code, silent, store_history=True, user_expressions=None,
                    allow_stdin=False):
         if not silent:
-            code=str(code) # Code seems to be unicode, convert to string here
-            if not ("select" in code.lower() or "update" in code.lower() or "insert" in code.lower() or "delete" in code.lower() or "count" in code.lower() or "calc" in code.lower() or "alter" in code.lower()):
-                code="SELECT "+code           
-   
             try:
+                code=str(code) # Code seems to be unicode, convert to string here
+                if not ("select" in code.lower() or "update" in code.lower() or "insert" in code.lower() or "delete" in code.lower() or "count" in code.lower() or "calc" in code.lower() or "alter" in code.lower()):
+                    code="SELECT "+code
+
                 t=pt.taql(code)
 
                 # match the first operation keyword, so that "select * from (update ..." will yield rows
@@ -136,7 +140,7 @@ class TaQLKernel(Kernel):
                     operation=m.group(1)
                 else:
                     operation="calc"
-                   
+
                 # Don't display output if code is 'SELECT FROM'
                 printrows=False
                 if operation=="select":
@@ -151,6 +155,8 @@ class TaQLKernel(Kernel):
                     printcount=False
 
                 output=self.format_output(t,printrows,printcount,operation)
+            except UnicodeEncodeError as e:
+                output="Error: unicode is not supported"
             except RuntimeError as e:
                 myerror=str(e).split('\n')
                 output=""
