@@ -16,6 +16,13 @@ class TaQLKernel(Kernel):
     language_info = {'mimetype': 'text/plain', 'name': 'taql'}
     banner = "TaQL - Table Query Language from Casacore"
 
+    def format_date(self, val, unit):
+        if val==numpy.floor(val):
+            # Do not show time part if 0
+            return quanta.quantity(val,unit).formatted('YMD_ONLY')
+        else:
+            return quanta.quantity(val,unit).formatted('DMY')
+
     def format_cell(self, val, colkeywords):
         out=""
 
@@ -29,14 +36,17 @@ class TaQLKernel(Kernel):
             numpy.set_printoptions(formatter=None)
         else:
             valtype='other'
-            if colkeywords.get('MEASINFO',{}).get('type')=='epoch' and colkeywords.get('QuantumUnits')==['d']:
+            if colkeywords.get('MEASINFO',{}).get('type')=='epoch' and colkeywords.get('QuantumUnits')[0] in ['d','s']:
+                # Format a date/time. Use quanta for scalars, use numpy for array logic around it (quanta does not support higher dimensional arrays)
                 valtype='epoch'
-                if (val==numpy.floor(val)).all():
-                    # Do not show time part if 0
-                    out+=quanta.quantity(val,'d').formatted('YMD_ONLY')
+                if isinstance(val, numpy.ndarray):
+                    numpy.set_printoptions(formatter={'all':lambda x: self.format_date(x,colkeywords['QuantumUnits'][0])})
+                    out+=numpy.array2string(val,separator=', ')
+                    numpy.set_printoptions(formatter=None)
                 else:
-                    out+=quanta.quantity(val,'d').formatted('DMY')
+                    out+=self.format_date(val,colkeywords['QuantumUnits'][0])
             elif colkeywords.get('MEASINFO',{}).get('type')=='direction' and 'QuantumUnits' in colkeywords and (numpy.array(colkeywords['QuantumUnits'])==colkeywords['QuantumUnits'][0]).all() and val.shape==(1,2):
+                # Format one direction. TODO: extend to array of directions
                     valtype='direction'
                     out+="["
                     part=quanta.quantity(val[0,0],'rad').formatted("TIME",precision=9)
@@ -45,6 +55,12 @@ class TaQLKernel(Kernel):
                     part=quanta.quantity(val[0,1],'rad').formatted("ANGLE",precision=9)
                     part=re.sub(r'(\d+)\.(\d+)\.(.*)',r'\1d\2m\3',part)
                     out+=part+"]"
+            elif isinstance(val, numpy.ndarray) and 'QuantumUnits' in colkeywords and (numpy.array(colkeywords['QuantumUnits'])==colkeywords['QuantumUnits'][0]).all():
+                # Format any array with units
+                valtype='quanta'
+                numpy.set_printoptions(formatter={'all':lambda x: quanta.quantity(x, colkeywords['QuantumUnits'][0]).formatted()})
+                out+=numpy.array2string(val,separator=', ')
+                numpy.set_printoptions(formatter=None)
             elif isinstance(val, numpy.ndarray):
                 out+=numpy.array2string(val,separator=', ')
             else:
@@ -58,6 +74,8 @@ class TaQLKernel(Kernel):
             else:
                 out+=" "+colkeywords['QuantumUnits'][0]
 
+        # Numpy sometimes adds double newlines, don't do that
+        out=out.replace('\n\n','\n')
         return out
 
     def format_row(self, t, row):
@@ -127,7 +145,10 @@ class TaQLKernel(Kernel):
     def do_execute(self, code, silent, store_history=True, user_expressions=None,
                    allow_stdin=False):
         if not silent:
+            output=""
             try:
+                code=re.sub(ur"([0-9\s\.\)\"])\xb5([A-Za-z])",ur"\1u\2",code) # Tolerate µ as prefix for a unit, substitute it with u
+                code=re.sub(ur"\u2245",ur"~=",code) # Tolerate ≅ for approximately equal
                 code=str(code) # Code seems to be unicode, convert to string here
                 if not ("select" in code.lower() or "update" in code.lower() or "insert" in code.lower() or "delete" in code.lower() or "count" in code.lower() or "calc" in code.lower() or "alter" in code.lower()):
                     code="SELECT "+code
@@ -156,7 +177,7 @@ class TaQLKernel(Kernel):
 
                 output=self.format_output(t,printrows,printcount,operation)
             except UnicodeEncodeError as e:
-                output="Error: unicode is not supported"
+                output+="Error: unicode is not supported"
             except RuntimeError as e:
                 myerror=str(e).split('\n')
                 output=""
