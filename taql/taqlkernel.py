@@ -32,7 +32,7 @@ class TaQLKernel(Kernel):
             tmpdict.reshape(val['shape'])
             # Leave out quotes around strings
             numpy.set_printoptions(formatter={'all':lambda x: str(x)})
-            out+=str(tmpdict)
+            out+=numpy.array2string(tmpdict, separator=', ')
             numpy.set_printoptions(formatter=None)
         else:
             valtype='other'
@@ -62,14 +62,18 @@ class TaQLKernel(Kernel):
                 out+=numpy.array2string(val,separator=', ')
                 numpy.set_printoptions(formatter=None)
             elif isinstance(val, numpy.ndarray):
+                # Undo quotes around strings
+                numpy.set_printoptions(formatter={'all':lambda x: str(x)})
                 out+=numpy.array2string(val,separator=', ')
+                numpy.set_printoptions(formatter=None)
             else:
                 out+=str(val)
 
         if 'QuantumUnits' in colkeywords and valtype=='other':
-            # Multiple different units for element in an array. TODO: do this properly
-            # For now, just print the units and let the user figure out what it means
+            # Print units if they haven't been taken care of
             if not (numpy.array(colkeywords['QuantumUnits'])==colkeywords['QuantumUnits'][0]).all():
+                # Multiple different units for element in an array. TODO: do this properly
+                # For now, just print the units and let the user figure out what it means
                 out+=" "+str(colkeywords['QuantumUnits'])
             else:
                 out+=" "+colkeywords['QuantumUnits'][0]
