@@ -23,6 +23,12 @@ class TaQLKernel(Kernel):
         else:
             return quanta.quantity(val,unit).formatted('DMY')
 
+    def format_quantum(self, val, unit):
+        if unit in ['rad','s','d']:
+            return str(val)+' '+unit
+        else:
+            return quanta.quantity(val, unit).formatted()
+
     def format_cell(self, val, colkeywords):
         out=""
 
@@ -36,7 +42,8 @@ class TaQLKernel(Kernel):
             numpy.set_printoptions(formatter=None)
         else:
             valtype='other'
-            if colkeywords.get('MEASINFO',{}).get('type')=='epoch' and colkeywords.get('QuantumUnits')[0] in ['d','s']:
+            singleUnit=('QuantumUnits' in colkeywords and (numpy.array(colkeywords['QuantumUnits'])==numpy.array(colkeywords['QuantumUnits'])[0]).all())
+            if colkeywords.get('MEASINFO',{}).get('type')=='epoch' and singleUnit:
                 # Format a date/time. Use quanta for scalars, use numpy for array logic around it (quanta does not support higher dimensional arrays)
                 valtype='epoch'
                 if isinstance(val, numpy.ndarray):
@@ -45,7 +52,7 @@ class TaQLKernel(Kernel):
                     numpy.set_printoptions(formatter=None)
                 else:
                     out+=self.format_date(val,colkeywords['QuantumUnits'][0])
-            elif colkeywords.get('MEASINFO',{}).get('type')=='direction' and 'QuantumUnits' in colkeywords and (numpy.array(colkeywords['QuantumUnits'])==colkeywords['QuantumUnits'][0]).all() and val.shape==(1,2):
+            elif colkeywords.get('MEASINFO',{}).get('type')=='direction' and singleUnit and val.shape==(1,2):
                 # Format one direction. TODO: extend to array of directions
                     valtype='direction'
                     out+="["
@@ -55,10 +62,10 @@ class TaQLKernel(Kernel):
                     part=quanta.quantity(val[0,1],'rad').formatted("ANGLE",precision=9)
                     part=re.sub(r'(\d+)\.(\d+)\.(.*)',r'\1d\2m\3',part)
                     out+=part+"]"
-            elif isinstance(val, numpy.ndarray) and 'QuantumUnits' in colkeywords and (numpy.array(colkeywords['QuantumUnits'])==colkeywords['QuantumUnits'][0]).all():
+            elif isinstance(val, numpy.ndarray) and singleUnit:
                 # Format any array with units
                 valtype='quanta'
-                numpy.set_printoptions(formatter={'all':lambda x: quanta.quantity(x, colkeywords['QuantumUnits'][0]).formatted()})
+                numpy.set_printoptions(formatter={'all':lambda x: self.format_quantum(x, colkeywords['QuantumUnits'][0])})
                 out+=numpy.array2string(val,separator=', ')
                 numpy.set_printoptions(formatter=None)
             elif isinstance(val, numpy.ndarray):
@@ -71,7 +78,7 @@ class TaQLKernel(Kernel):
 
         if 'QuantumUnits' in colkeywords and valtype=='other':
             # Print units if they haven't been taken care of
-            if not (numpy.array(colkeywords['QuantumUnits'])==colkeywords['QuantumUnits'][0]).all():
+            if not (numpy.array(colkeywords['QuantumUnits'])==numpy.array(colkeywords['QuantumUnits'])[0]).all():
                 # Multiple different units for element in an array. TODO: do this properly
                 # For now, just print the units and let the user figure out what it means
                 out+=" "+str(colkeywords['QuantumUnits'])
