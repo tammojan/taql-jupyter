@@ -24,10 +24,11 @@ class TaQLKernel(Kernel):
             return quanta.quantity(val,unit).formatted('DMY')
 
     def format_quantum(self, val, unit):
-        if unit in ['rad','s','d']:
+        q=quanta.quantity(val,unit)
+        if q.conforms(quanta.quantity(1,'rad')) or q.conforms(quanta.quantity(1,'s')):
             return quanta.quantity(val, 'm').formatted()[:-1]+unit
         else:
-            return quanta.quantity(val, unit).formatted()
+            return q.formatted()
 
     def format_cell(self, val, colkeywords):
         out=""
@@ -92,7 +93,7 @@ class TaQLKernel(Kernel):
 
         # Numpy sometimes adds double newlines, don't do that
         out=out.replace('\n\n','\n')
-        return out
+        return valtype+": "+out
 
     def format_row(self, t, row):
         out=""
