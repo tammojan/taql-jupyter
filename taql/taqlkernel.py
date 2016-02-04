@@ -92,7 +92,7 @@ class TaQLKernel(Kernel):
 
         # Numpy sometimes adds double newlines, don't do that
         out=out.replace('\n\n','\n')
-        return valtype+":"+out
+        return out
 
     def format_row(self, t, row):
         out=""
