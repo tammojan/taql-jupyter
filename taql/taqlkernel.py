@@ -25,7 +25,7 @@ class TaQLKernel(Kernel):
 
     def format_quantum(self, val, unit):
         if unit in ['rad','s','d']:
-            return str(val)+' '+unit
+            return quanta.quantity(val, 'm').formatted()[:-1]+unit
         else:
             return quanta.quantity(val, unit).formatted()
 
@@ -69,11 +69,16 @@ class TaQLKernel(Kernel):
                 out+=numpy.array2string(val,separator=', ')
                 numpy.set_printoptions(formatter=None)
             elif isinstance(val, numpy.ndarray):
+                valtype='other'
                 # Undo quotes around strings
                 numpy.set_printoptions(formatter={'all':lambda x: str(x)})
                 out+=numpy.array2string(val,separator=', ')
                 numpy.set_printoptions(formatter=None)
+            elif singleUnit:
+                valtype='onequantum'
+                out+=self.format_quantum(val, colkeywords['QuantumUnits'][0])
             else:
+                valtype='other'
                 out+=str(val)
 
         if 'QuantumUnits' in colkeywords and valtype=='other':
@@ -87,7 +92,7 @@ class TaQLKernel(Kernel):
 
         # Numpy sometimes adds double newlines, don't do that
         out=out.replace('\n\n','\n')
-        return out
+        return valtype+":"+out
 
     def format_row(self, t, row):
         out=""
