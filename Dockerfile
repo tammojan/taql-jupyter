@@ -77,9 +77,9 @@ RUN cd ${INSTALLDIR}/cfitsio/build && make install
 # install-casacore
 #
 RUN mkdir -p ${INSTALLDIR}/casacore/build
-RUN mkdir -p ${INSTALLDIR}/casacore/data
 RUN cd ${INSTALLDIR}/casacore && git clone --branch masktql https://github.com/gervandiepen/casacore.git src
 RUN cd ${INSTALLDIR}/casacore/src && git pull
+RUN mkdir -p ${INSTALLDIR}/casacore/data
 RUN cd ${INSTALLDIR}/casacore/data && wget --retry-connrefused ftp://anonymous@ftp.astron.nl/outgoing/Measures/WSRT_Measures.ztar
 RUN cd ${INSTALLDIR}/casacore/data && tar xf WSRT_Measures.ztar
 RUN cd ${INSTALLDIR}/casacore/build && cmake -DCMAKE_INSTALL_PREFIX=${INSTALLDIR}/casacore/ -DDATA_DIR=${INSTALLDIR}/casacore/data -DCFITSIO_ROOT_DIR=${INSTALLDIR}/cfitsio/ -DBUILD_PYTHON=True -DUSE_OPENMP=True -DUSE_FFTW3=TRUE -DMODULE=ms -DCXX11=ON ../src/
@@ -109,7 +109,6 @@ RUN apt-get install -yq --no-install-recommends git vim wget build-essential ca-
 RUN echo "en_US.UTF-8 UTF-8" > /etc/locale.gen
 RUN locale-gen "en_US.UTF-8"
 RUN wget --quiet https://github.com/krallin/tini/releases/download/v0.6.0/tini && echo "d5ed732199c36a1189320e6c4859f0169e950692f451c03e7854243b95f4234b *tini" | sha256sum -c - && mv tini /usr/local/bin/tini && chmod +x /usr/local/bin/tini
-#ENV CONDA_DIR=/opt/conda
 ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 ENV SHELL=/bin/bash
 ENV NB_USER=${USER}
@@ -117,17 +116,13 @@ ENV NB_UID=1000
 ENV LC_ALL=en_US.UTF-8
 ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US.UTF-8
-#RUN mkdir -p /opt/conda && chown ${USER} /opt/conda
 
 USER ${USER}
 RUN mkdir /home/${USER}/work && mkdir /home/${USER}/.jupyter && mkdir /home/${USER}/.local
-#RUN cd /tmp && mkdir -p $CONDA_DIR && wget --quiet https://repo.continuum.io/miniconda/Miniconda3-3.9.1-Linux-x86_64.sh && echo "6c6b44acdd0bc4229377ee10d52c8ac6160c336d9cdd669db7371aa9344e1ac3 *Miniconda3-3.9.1-Linux-x86_64.sh" | sha256sum -c - && /bin/bash Miniconda3-3.9.1-Linux-x86_64.sh -f -b -p $CONDA_DIR && rm Miniconda3-3.9.1-Linux-x86_64.sh && $CONDA_DIR/bin/conda install --yes conda==3.14.1
-#RUN conda install --yes 'notebook=4.1*' terminado && conda clean -yt
 
 USER root
 EXPOSE 8888/tcp
 WORKDIR /home/${USER}/work
-#ENTRYPOINT tini
 
 #
 # install taql kernel
@@ -135,19 +130,22 @@ WORKDIR /home/${USER}/work
 RUN cd ${INSTALLDIR} && git clone https://github.com/tammojan/taql-jupyter
 ENV PYTHONPATH /home/lofar/opt/taql-jupyter
 RUN sudo mkdir -p /usr/local/share/jupyter/kernels
-RUN sudo cp -r /home/lofar/opt/taql-jupyter/taql /usr/local/share/jupyter/kernels
+RUN sudo ln -s /home/lofar/opt/taql-jupyter/taql /usr/local/share/jupyter/kernels
 
-COPY jupyter_notebook_config.py /home/${USER}/.jupyter/
+RUN ln -s ${INSTALLDIR}/taql-jupyter/jupyter_notebook_config.py /home/${USER}/.jupyter/
 ENV NB_USER=${USER}
-COPY start-notebook.sh /usr/local/bin/
-COPY start-notebook.sh /usr/local/bin/
-COPY LearnTaQL.ipynb /home/${NB_USER}/work
+RUN ln -s ${INSTALLDIR}/taql-jupyter/start-notebook.sh /usr/local/bin/
+RUN ln -s ${INSTALLDIR}/taql-jupyter/LearnTaQL.ipynb /home/${NB_USER}/work
 COPY demodata.tgz /home/${USER}/
 RUN cd /home/${USER}/work && tar xf /home/${USER}/demodata.tgz
-CMD start-notebook.sh /home/${NB_USER}/work/LearnTaQL.ipynb
+CMD cd ${INSTALLDIR}/taql-jupyter && git pull && cd /home/${USER}/work && start-notebook.sh /home/${NB_USER}/work/LearnTaQL.ipynb
+RUN mkdir /home/${NB_USER}/.jupyter/custom
+RUN ln -s ${INSTALLDIR}/taql-jupyter/custom.css /home/${NB_USER}/.jupyter/custom
+RUN cd ${INSTALLDIR}/taql-jupyter && git pull
 RUN chown -R ${USER}:users /home/${NB_USER}/.jupyter
 RUN chown -R ${USER}:users /home/${NB_USER}/.jupyter
 RUN chown -R ${USER}:users /home/${NB_USER}/work
+RUN chown -R ${USER}:users ${INSTALLDIR}/taql-jupyter
 
 ENV PYTHONPATH /home/lofar/opt/taql-jupyter/taql
 
