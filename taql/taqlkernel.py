@@ -180,6 +180,7 @@ class TaQLKernel(Kernel):
 
     def do_execute(self, code, silent, store_history=True, user_expressions=None,
                    allow_stdin=False):
+        ashtml=False
         if not silent:
             output=""
             try:
@@ -211,7 +212,10 @@ class TaQLKernel(Kernel):
                 if operation=="select" and not('from' in code.lower()):
                     printcount=False
 
-                output=self.format_output(t,printrows,printcount,operation,printcount)
+                if printcount:
+                    ashtml=True
+
+                output=self.format_output(t,printrows,printcount,operation,ashtml)
 
             except UnicodeEncodeError as e:
                 output+="Error: unicode is not supported"
@@ -226,7 +230,7 @@ class TaQLKernel(Kernel):
                 else:
                     output+="\n".join(myerror[1:])
 
-            if printcount:
+            if ashtml:
                 stream_content={'source': 'TaQL kernel', 'data': {'text/html':output}, 'metadata': {}}
                 self.send_response(self.iopub_socket, 'display_data', stream_content)
             else:
