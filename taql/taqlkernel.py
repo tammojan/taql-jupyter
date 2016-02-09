@@ -94,30 +94,33 @@ class TaQLKernel(Kernel):
         #return valtype+": "+out
         return out
 
-    def format_row(self, t, row):
+    def format_row(self, t, row, ashtml):
         out=""
-        previous_cell_was_multiline=False
-        firstcell=True
-        for colname in t.colnames():
-            cellout=self.format_cell(row[colname], t.getcolkeywords(colname))
 
-
-            if not(firstcell):
-                if previous_cell_was_multiline:  # Newline after multiline cell
-                    out+="\n"
-                elif "\n" in cellout:            # Newline before multiline cell
-                    out+="\n"
-                else:
-                    out+="\t"
-
-            out+=cellout
-
-            if "\n" in cellout:
-                previous_cell_was_multiline=True
-            firstcell=False
+        if ashtml:
+            out+="\n<tr>"
+            for colname in t.colnames():
+                out+="<td><pre>"+self.format_cell(row[colname], t.getcolkeywords(colname))+"</pre></td>\n"
+            out+="</tr>\n"
+        else:
+            previous_cell_was_multiline=False
+            firstcell=True
+            for colname in t.colnames():
+                cellout=self.format_cell(row[colname], t.getcolkeywords(colname))
+                if not(firstcell):
+                    if previous_cell_was_multiline:  # Newline after multiline cell
+                        out+="\n"
+                    elif "\n" in cellout:            # Newline before multiline cell
+                        out+="\n"
+                    else:
+                        out+="\t"
+                out+=cellout
+                if "\n" in cellout:
+                    previous_cell_was_multiline=True
+                firstcell=False
         return out
 
-    def format_table(self, t, printrows, printcount, operation):
+    def format_table(self, t, printrows, printcount, operation, ashtml):
         out=""
         # Print number of rows, but not for simple calc expressions
         if printcount or (t.nrows()>=100):
@@ -126,20 +129,31 @@ class TaQLKernel(Kernel):
                 out+="s\n"
             else:
                 out+="\n"
+
+        if printrows and ashtml:
+            out+="<table class='taqltable'>\n"
+
         # Print column names (not if they are all auto-generated)
-        if operation=="select" and not(all([colname[:4]=="Col_" for colname in t.colnames()])):
-            if t.nrows()>0 and not "\n" in self.format_row(t,t[0]): # Try to get spacing right
+        if printrows and not(all([colname[:4]=="Col_" for colname in t.colnames()])):
+          if ashtml:
+            out+="<tr>"
+            for colname in t.colnames():
+                out+="<th><pre><b>"+colname+"</b></pre></th>"
+            out+="</tr>"
+          else:
+            if t.nrows()>0 and not "\n" in self.format_row(t,t[0],ashtml): # Try to get spacing right for simple tables
                 for colname in t.colnames():
                     firstval=self.format_cell(t[0][colname],t.getcolkeywords(colname))
                     out+=colname+" "*(len(firstval)-len(colname))+"\t"
             else:
                 for colname in t.colnames():
                     out+=colname+"\t"
+
             out+="\n"
         if printrows:
             rowcount=0
             for row in t:
-                rowout=self.format_row(t, row)
+                rowout=self.format_row(t, row, ashtml)
                 rowcount+=1
                 out+=rowout
                 if "\n" in rowout: # Double space after multiline rows
@@ -151,12 +165,16 @@ class TaQLKernel(Kernel):
 
         if out[-2:]=="\n\n":
             out=out[:-1]
+
+        if ashtml:
+            out+="</table>"
+
         return out
 
-    def format_output(self, t, printrows, printcount, operation):
-        numpy.set_printoptions(precision=5)
+    def format_output(self, t, printrows, printcount, operation, ashtml):
+        numpy.set_printoptions(precision=5,linewidth=200)
         if isinstance(t, pt.table):
-            return self.format_table(t, printrows, printcount, operation)
+            return self.format_table(t, printrows, printcount, operation, ashtml)
         else:
             return str(t[0])
 
@@ -193,7 +211,7 @@ class TaQLKernel(Kernel):
                 if operation=="select" and not('from' in code.lower()):
                     printcount=False
 
-                output=self.format_output(t,printrows,printcount,operation)
+                output=self.format_output(t,printrows,printcount,operation,printcount)
 
             except UnicodeEncodeError as e:
                 output+="Error: unicode is not supported"
@@ -208,10 +226,12 @@ class TaQLKernel(Kernel):
                 else:
                     output+="\n".join(myerror[1:])
 
-            stream_content = {'name': 'stdout', 'text': output}
-            self.send_response(self.iopub_socket, 'stream', stream_content)
-            #stream_content={'source': 'TaQL kernel', 'data': {'text/html':'<h1>Joepie</h1>'}, 'metadata': {}}
-            #self.send_response(self.iopub_socket, 'display_data', stream_content)
+            if printcount:
+                stream_content={'source': 'TaQL kernel', 'data': {'text/html':output}, 'metadata': {}}
+                self.send_response(self.iopub_socket, 'display_data', stream_content)
+            else:
+                stream_content = {'name': 'stdout', 'text': output}
+                self.send_response(self.iopub_socket, 'stream', stream_content)
 
         return {'status': 'ok',
                 # The base class increments the execution count
