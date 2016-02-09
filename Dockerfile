@@ -79,6 +79,7 @@ RUN cd ${INSTALLDIR}/cfitsio/build && make install
 RUN mkdir -p ${INSTALLDIR}/casacore/build
 RUN mkdir -p ${INSTALLDIR}/casacore/data
 RUN cd ${INSTALLDIR}/casacore && git clone --branch masktql https://github.com/gervandiepen/casacore.git src
+RUN cd ${INSTALLDIR}/casacore/src && git pull
 RUN cd ${INSTALLDIR}/casacore/data && wget --retry-connrefused ftp://anonymous@ftp.astron.nl/outgoing/Measures/WSRT_Measures.ztar
 RUN cd ${INSTALLDIR}/casacore/data && tar xf WSRT_Measures.ztar
 RUN cd ${INSTALLDIR}/casacore/build && cmake -DCMAKE_INSTALL_PREFIX=${INSTALLDIR}/casacore/ -DDATA_DIR=${INSTALLDIR}/casacore/data -DCFITSIO_ROOT_DIR=${INSTALLDIR}/cfitsio/ -DBUILD_PYTHON=True -DUSE_OPENMP=True -DUSE_FFTW3=TRUE -DMODULE=ms -DCXX11=ON ../src/
@@ -149,6 +150,9 @@ RUN chown -R ${USER}:users /home/${NB_USER}/.jupyter
 RUN chown -R ${USER}:users /home/${NB_USER}/work
 
 ENV PYTHONPATH /home/lofar/opt/taql-jupyter/taql
+
+RUN mkdir -p /usr/local/share/data/casacore/
+RUN cp -r /home/lofar/opt/casacore/data/* /usr/local/share/data/casacore/
 
 USER ${USER}
 
