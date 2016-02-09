@@ -1,0 +1,7 @@
+.tjred {background: lightblue;}
+.rendered_html pre, .rendered_html code {color:#000;background-color:#F9F2F4;}
+
+.taqltable {border-collapse: collapse;}
+.taqltable td {white-space:pre;}
+.taqltable td pre {white-space:pre;font-size:90%;}
+.taqltable tr:nth-child(even) {background-color:#F9F2F4;}

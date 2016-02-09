@@ -3,8 +3,6 @@
 from ipykernel.kernelbase import Kernel
 import casacore.tables as pt
 import casacore.quanta as quanta
-import sys
-import six
 import re
 import numpy
 
@@ -23,6 +21,13 @@ class TaQLKernel(Kernel):
         else:
             return quanta.quantity(val,unit).formatted('DMY')
 
+    def format_quantum(self, val, unit):
+        q=quanta.quantity(val,unit)
+        if q.canonical().get_unit() in ['rad','s']:
+            return quanta.quantity(val, 'm').formatted()[:-1]+unit
+        else:
+            return q.formatted()
+
     def format_cell(self, val, colkeywords):
         out=""
 
@@ -36,7 +41,8 @@ class TaQLKernel(Kernel):
             numpy.set_printoptions(formatter=None)
         else:
             valtype='other'
-            if colkeywords.get('MEASINFO',{}).get('type')=='epoch' and colkeywords.get('QuantumUnits')[0] in ['d','s']:
+            singleUnit=('QuantumUnits' in colkeywords and (numpy.array(colkeywords['QuantumUnits'])==numpy.array(colkeywords['QuantumUnits'])[0]).all())
+            if colkeywords.get('MEASINFO',{}).get('type')=='epoch' and singleUnit:
                 # Format a date/time. Use quanta for scalars, use numpy for array logic around it (quanta does not support higher dimensional arrays)
                 valtype='epoch'
                 if isinstance(val, numpy.ndarray):
@@ -45,7 +51,7 @@ class TaQLKernel(Kernel):
                     numpy.set_printoptions(formatter=None)
                 else:
                     out+=self.format_date(val,colkeywords['QuantumUnits'][0])
-            elif colkeywords.get('MEASINFO',{}).get('type')=='direction' and 'QuantumUnits' in colkeywords and (numpy.array(colkeywords['QuantumUnits'])==colkeywords['QuantumUnits'][0]).all() and val.shape==(1,2):
+            elif colkeywords.get('MEASINFO',{}).get('type')=='direction' and singleUnit and val.shape==(1,2):
                 # Format one direction. TODO: extend to array of directions
                     valtype='direction'
                     out+="["
@@ -55,23 +61,28 @@ class TaQLKernel(Kernel):
                     part=quanta.quantity(val[0,1],'rad').formatted("ANGLE",precision=9)
                     part=re.sub(r'(\d+)\.(\d+)\.(.*)',r'\1d\2m\3',part)
                     out+=part+"]"
-            elif isinstance(val, numpy.ndarray) and 'QuantumUnits' in colkeywords and (numpy.array(colkeywords['QuantumUnits'])==colkeywords['QuantumUnits'][0]).all():
+            elif isinstance(val, numpy.ndarray) and singleUnit:
                 # Format any array with units
                 valtype='quanta'
-                numpy.set_printoptions(formatter={'all':lambda x: quanta.quantity(x, colkeywords['QuantumUnits'][0]).formatted()})
+                numpy.set_printoptions(formatter={'all':lambda x: self.format_quantum(x, colkeywords['QuantumUnits'][0])})
                 out+=numpy.array2string(val,separator=', ')
                 numpy.set_printoptions(formatter=None)
             elif isinstance(val, numpy.ndarray):
+                valtype='other'
                 # Undo quotes around strings
                 numpy.set_printoptions(formatter={'all':lambda x: str(x)})
                 out+=numpy.array2string(val,separator=', ')
                 numpy.set_printoptions(formatter=None)
+            elif singleUnit:
+                valtype='onequantum'
+                out+=self.format_quantum(val, colkeywords['QuantumUnits'][0])
             else:
+                valtype='other'
                 out+=str(val)
 
         if 'QuantumUnits' in colkeywords and valtype=='other':
             # Print units if they haven't been taken care of
-            if not (numpy.array(colkeywords['QuantumUnits'])==colkeywords['QuantumUnits'][0]).all():
+            if not (numpy.array(colkeywords['QuantumUnits'])==numpy.array(colkeywords['QuantumUnits'])[0]).all():
                 # Multiple different units for element in an array. TODO: do this properly
                 # For now, just print the units and let the user figure out what it means
                 out+=" "+str(colkeywords['QuantumUnits'])
@@ -80,30 +91,36 @@ class TaQLKernel(Kernel):
 
         # Numpy sometimes adds double newlines, don't do that
         out=out.replace('\n\n','\n')
+        #return valtype+": "+out
         return out
 
-    def format_row(self, t, row):
+    def format_row(self, t, row, ashtml):
         out=""
-        previous_cell_was_multiline=False
-        firstcell=True
-        for colname in t.colnames():
-            cellout=self.format_cell(row[colname], t.getcolkeywords(colname))
 
-            if not(firstcell):
-                if previous_cell_was_multiline:
-                    out+="\n"
-                else:
-                    if "\n" in cellout:
-                        previous_cell_was_multiline=True
+        if ashtml:
+            out+="\n<tr>"
+            for colname in t.colnames():
+                out+="<td><pre>"+self.format_cell(row[colname], t.getcolkeywords(colname))+"</pre></td>\n"
+            out+="</tr>\n"
+        else:
+            previous_cell_was_multiline=False
+            firstcell=True
+            for colname in t.colnames():
+                cellout=self.format_cell(row[colname], t.getcolkeywords(colname))
+                if not(firstcell):
+                    if previous_cell_was_multiline:  # Newline after multiline cell
+                        out+="\n"
+                    elif "\n" in cellout:            # Newline before multiline cell
                         out+="\n"
                     else:
                         out+="\t"
-            firstcell=False
-
-            out+=cellout
+                out+=cellout
+                if "\n" in cellout:
+                    previous_cell_was_multiline=True
+                firstcell=False
         return out
 
-    def format_table(self, t, printrows, printcount, operation):
+    def format_table(self, t, printrows, printcount, operation, ashtml):
         out=""
         # Print number of rows, but not for simple calc expressions
         if printcount or (t.nrows()>=100):
@@ -112,20 +129,31 @@ class TaQLKernel(Kernel):
                 out+="s\n"
             else:
                 out+="\n"
+
+        if printrows and ashtml:
+            out+="<table class='taqltable'>\n"
+
         # Print column names (not if they are all auto-generated)
-        if operation=="select" and not(all([colname[:4]=="Col_" for colname in t.colnames()])):
-            if t.nrows()>0 and not "\n" in self.format_row(t,t[0]): # Try to get spacing right
+        if printrows and not(all([colname[:4]=="Col_" for colname in t.colnames()])):
+          if ashtml:
+            out+="<tr>"
+            for colname in t.colnames():
+                out+="<th><pre><b>"+colname+"</b></pre></th>"
+            out+="</tr>"
+          else:
+            if t.nrows()>0 and not "\n" in self.format_row(t,t[0],ashtml): # Try to get spacing right for simple tables
                 for colname in t.colnames():
                     firstval=self.format_cell(t[0][colname],t.getcolkeywords(colname))
                     out+=colname+" "*(len(firstval)-len(colname))+"\t"
             else:
                 for colname in t.colnames():
                     out+=colname+"\t"
+
             out+="\n"
         if printrows:
             rowcount=0
             for row in t:
-                rowout=self.format_row(t, row)
+                rowout=self.format_row(t, row, ashtml)
                 rowcount+=1
                 out+=rowout
                 if "\n" in rowout: # Double space after multiline rows
@@ -137,17 +165,22 @@ class TaQLKernel(Kernel):
 
         if out[-2:]=="\n\n":
             out=out[:-1]
+
+        if ashtml:
+            out+="</table>"
+
         return out
 
-    def format_output(self, t, printrows, printcount, operation):
-        numpy.set_printoptions(precision=5)
+    def format_output(self, t, printrows, printcount, operation, ashtml):
+        numpy.set_printoptions(precision=5,linewidth=200)
         if isinstance(t, pt.table):
-            return self.format_table(t, printrows, printcount, operation)
+            return self.format_table(t, printrows, printcount, operation, ashtml)
         else:
             return str(t[0])
 
     def do_execute(self, code, silent, store_history=True, user_expressions=None,
                    allow_stdin=False):
+        ashtml=False
         if not silent:
             output=""
             try:
@@ -179,7 +212,11 @@ class TaQLKernel(Kernel):
                 if operation=="select" and not('from' in code.lower()):
                     printcount=False
 
-                output=self.format_output(t,printrows,printcount,operation)
+                if printcount:
+                    ashtml=True
+
+                output=self.format_output(t,printrows,printcount,operation,ashtml)
+
             except UnicodeEncodeError as e:
                 output+="Error: unicode is not supported"
             except RuntimeError as e:
@@ -193,8 +230,12 @@ class TaQLKernel(Kernel):
                 else:
                     output+="\n".join(myerror[1:])
 
-            stream_content = {'name': 'stdout', 'text': output}
-            self.send_response(self.iopub_socket, 'stream', stream_content)
+            if ashtml:
+                stream_content={'source': 'TaQL kernel', 'data': {'text/html':output}, 'metadata': {}}
+                self.send_response(self.iopub_socket, 'display_data', stream_content)
+            else:
+                stream_content = {'name': 'stdout', 'text': output}
+                self.send_response(self.iopub_socket, 'stream', stream_content)
 
         return {'status': 'ok',
                 # The base class increments the execution count
