@@ -3,8 +3,6 @@
 from ipykernel.kernelbase import Kernel
 import casacore.tables as pt
 import casacore.quanta as quanta
-import sys
-import six
 import re
 import numpy
 
@@ -103,18 +101,20 @@ class TaQLKernel(Kernel):
         for colname in t.colnames():
             cellout=self.format_cell(row[colname], t.getcolkeywords(colname))
 
+
             if not(firstcell):
-                if previous_cell_was_multiline:
+                if previous_cell_was_multiline:  # Newline after multiline cell
+                    out+="\n"
+                elif "\n" in cellout:            # Newline before multiline cell
                     out+="\n"
                 else:
-                    if "\n" in cellout:
-                        previous_cell_was_multiline=True
-                        out+="\n"
-                    else:
-                        out+="\t"
-            firstcell=False
+                    out+="\t"
 
             out+=cellout
+
+            if "\n" in cellout:
+                previous_cell_was_multiline=True
+            firstcell=False
         return out
 
     def format_table(self, t, printrows, printcount, operation):
@@ -194,6 +194,7 @@ class TaQLKernel(Kernel):
                     printcount=False
 
                 output=self.format_output(t,printrows,printcount,operation)
+
             except UnicodeEncodeError as e:
                 output+="Error: unicode is not supported"
             except RuntimeError as e:
@@ -209,6 +210,8 @@ class TaQLKernel(Kernel):
 
             stream_content = {'name': 'stdout', 'text': output}
             self.send_response(self.iopub_socket, 'stream', stream_content)
+            #stream_content={'source': 'TaQL kernel', 'data': {'text/html':'<h1>Joepie</h1>'}, 'metadata': {}}
+            #self.send_response(self.iopub_socket, 'display_data', stream_content)
 
         return {'status': 'ok',
                 # The base class increments the execution count
