@@ -4,4 +4,22 @@
 .taqltable {border-collapse: collapse;}
 .taqltable td {white-space:pre;}
 .taqltable td pre {white-space:pre;font-size:90%;}
-.taqltable tr:nth-child(even) {background-color:#F9F2F4;}
+.taqltable tr:nth-child(even) {background-color:#E1EDFF;}
+
+.exercise {
+  padding:15px;
+  background-color:#B7E8D8;
+}
+
+.newin21 {
+  background-color:#FFE9BD;
+}
+
+/*
+E8AB9C oranjerood
+FFE9BD bruin
+F1FFC7 lichtgroen
+B7E8D8 groen
+E1EDFF lichtblauw
+https://color.adobe.com/Pastels-color-theme-2286631/
+*/
