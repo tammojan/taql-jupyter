@@ -39,4 +39,4 @@ if 'PASSWORD' in os.environ:
     del os.environ['PASSWORD']
 
 c.NotebookApp.file_to_run = 'LearnTaQL.ipynb'
-c.KernelSpecManager.whitelist = set([taql])
+c.KernelSpecManager.whitelist = set(['taql'])
