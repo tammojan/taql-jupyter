@@ -138,6 +138,7 @@ RUN ln -s ${INSTALLDIR}/taql-jupyter/start-notebook.sh /usr/local/bin/
 RUN ln -s ${INSTALLDIR}/taql-jupyter/LearnTaQL.ipynb /home/${NB_USER}/work
 COPY demodata.tgz /home/${USER}/
 RUN cd /home/${USER}/work && tar xf /home/${USER}/demodata.tgz
+CMD echo ""
 CMD cd ${INSTALLDIR}/taql-jupyter && git pull && cd /home/${USER}/work && start-notebook.sh /home/${NB_USER}/work/LearnTaQL.ipynb
 RUN mkdir /home/${NB_USER}/.jupyter/custom
 RUN ln -s ${INSTALLDIR}/taql-jupyter/custom.css /home/${NB_USER}/.jupyter/custom
