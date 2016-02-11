@@ -222,12 +222,18 @@ class TaQLKernel(Kernel):
             except RuntimeError as e:
                 myerror=str(e).split('\n')
                 output=""
-                output+=myerror[0]+"\n"
-                m = re.search('position (\d+) ', myerror[1])
+                m = re.search('parse error at or near position (\d+) ', myerror[1])
                 if (m):
-                    pos=int(m.group(1))
-                    output+=myerror[1]+":"+" "*(21+pos-len(myerror[1]))+"^\n"
+                    ashtml=True
+                    pos=int(m.group(1))+22
+                    output+='<pre>'+myerror[0][0:pos]
+                    output+='<span style="background:red;color:white">'+myerror[0][pos]+'</span>'
+                    output+=myerror[0][pos+1:]+'\n'
+                    output+="\n".join(myerror[1:])
+                    #output+=myerror[1]+":"+" "*(21+pos-len(myerror[1]))+"^\n"
+                    output+='</pre>'
                 else:
+                    output+=myerror[0]+"\n"
                     output+="\n".join(myerror[1:])
 
             if ashtml:
