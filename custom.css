@@ -1,6 +1,8 @@
 .tjred {background: lightblue;}
 .rendered_html pre, .rendered_html code {color:#000;background-color:#F9F2F4;}
 
+.taqltable th {white-space:pre;}
+.taqltable th pre b {white-space:pre;}
 .taqltable {border-collapse: collapse;}
 .taqltable td {white-space:pre;}
 .taqltable td pre {white-space:pre;font-size:90%;}
