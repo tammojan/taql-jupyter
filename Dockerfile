@@ -142,6 +142,7 @@ RUN cd /home/${USER}/work && tar xf /home/${USER}/demodata.tgz
 # CMD cd ${INSTALLDIR}/taql-jupyter && git pull && cd /home/${USER}/work && start-notebook.sh /home/${NB_USER}/work/LearnTaQL.ipynb
 RUN mkdir /home/${NB_USER}/.jupyter/custom
 RUN ln -s ${INSTALLDIR}/taql-jupyter/custom.css /home/${NB_USER}/.jupyter/custom
+RUN cp -r /home/lofar/opt/casacore/data/geodetic/Observatories /home/${USER}/work/
 RUN cd ${INSTALLDIR}/taql-jupyter && git pull
 RUN chown -R ${USER}:users /home/${NB_USER}/.jupyter
 RUN chown -R ${USER}:users /home/${NB_USER}/.jupyter
