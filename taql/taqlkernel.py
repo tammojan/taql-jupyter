@@ -227,7 +227,7 @@ class TaQLKernel(Kernel):
                     ashtml=True
                     pos=int(m.group(1))+22
                     output+='<pre>'+myerror[0][0:pos]
-                    output+='<span style="background:red;color:white">'+myerror[0][pos]+'</span>'
+                    output+='<span style="background:red;color:white">'+(myerror[0]+' ')[pos]+'</span>'
                     output+=myerror[0][pos+1:]+'\n'
                     output+="\n".join(myerror[1:])
                     #output+=myerror[1]+":"+" "*(21+pos-len(myerror[1]))+"^\n"
