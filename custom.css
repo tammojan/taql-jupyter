@@ -9,11 +9,12 @@
 .taqltable tr:nth-child(even) {background-color:#E1EDFF;}
 
 .exercise {
-  padding:15px;
+  padding:10px;
   background-color:#B7E8D8;
 }
 
 .newin21 {
+  padding:10px;
   background-color:#FFE9BD;
 }
 
