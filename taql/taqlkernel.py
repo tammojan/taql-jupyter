@@ -187,17 +187,16 @@ class TaQLKernel(Kernel):
                 code=re.sub(ur"([0-9\s\.\)\"])\xb5([A-Za-z])",ur"\1u\2",code) # Tolerate µ as prefix for a unit, substitute it with u
                 code=re.sub(ur"\u2245",ur"~=",code) # Tolerate ≅ for approximately equal
                 code=str(code) # Code seems to be unicode, convert to string here
-                if not ("select" in code.lower() or "update" in code.lower() or "insert" in code.lower() or "delete" in code.lower() or "count" in code.lower() or "calc" in code.lower() or "alter" in code.lower()):
-                    code="SELECT "+code
 
-                t=pt.taql(code)
-
-                # match the first operation keyword, so that "select * from (update ..." will yield rows
-                m=re.match(".*?((?:select)|(?:update)|(?:insert)|(?:delete)|(?:count)|(?:calc)|(?:create table)|(?:insert)|(?:alter table))",code.lower())
+                # match the first operation keyword, so that only "select * from (update ..." will yield rows
+                m=re.match(".*?((?:select)|(?:update)|(?:insert)|(?:delete)|(?:count)|(?:calc)|(?:create table)|(?:insert)|(?:alter table)|(?:show))",code.lower())
                 if m:
                     operation=m.group(1)
                 else:
                     operation="calc"
+                    code="select "+code
+
+                t=pt.taql(code)
 
                 # Don't display output if code is 'SELECT FROM'
                 printrows=False
@@ -209,7 +208,7 @@ class TaQLKernel(Kernel):
 
                 printcount=True
                 # Don't display row count in simple calc-like expressions
-                if operation=="select" and not('from' in code.lower()):
+                if operation=="show" or (operation=="select" and not('from' in code.lower())):
                     printcount=False
 
                 if printcount:
