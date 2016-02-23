@@ -193,7 +193,7 @@ class TaQLKernel(Kernel):
                 if m:
                     operation=m.group(1)
                 else:
-                    operation="calc"
+                    operation="select"
                     code="select "+code
 
                 t=pt.taql(code)
@@ -208,7 +208,7 @@ class TaQLKernel(Kernel):
 
                 printcount=True
                 # Don't display row count in simple calc-like expressions
-                if operation=="show" or (operation=="select" and not('from' in code.lower())):
+                if operation=="show" or operation=="calc" or (operation=="select" and not('from' in code.lower())):
                     printcount=False
 
                 if printcount:
