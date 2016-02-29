@@ -150,6 +150,8 @@ class TaQLKernel(Kernel):
                     out+=colname+"\t"
 
             out+="\n"
+
+        cropped=False
         if printrows:
             rowcount=0
             for row in t:
@@ -160,7 +162,7 @@ class TaQLKernel(Kernel):
                     out+="\n"
                 out+="\n"
                 if rowcount>=100:
-                    out+=".\n.\n.\n("+str(t.nrows()-100)+" more rows)\n"
+                    cropped=True
                     break
 
         if out[-2:]=="\n\n":
@@ -168,6 +170,8 @@ class TaQLKernel(Kernel):
 
         if ashtml:
             out+="</table>"
+        if cropped:
+            out+="("+str(t.nrows()-100)+" more rows)\n"
 
         return out
 
@@ -189,7 +193,7 @@ class TaQLKernel(Kernel):
                 code=str(code) # Code seems to be unicode, convert to string here
 
                 # match the first operation keyword, so that only "select * from (update ..." will yield rows
-                m=re.match(".*?((?:select)|(?:update)|(?:insert)|(?:delete)|(?:count)|(?:calc)|(?:create table)|(?:insert)|(?:alter table)|(?:show))",code.lower())
+                m=re.match(".*?((?:select)|(?:update)|(?:insert)|(?:delete)|(?:count)|(?:calc)|(?:create table)|(?:insert)|(?:alter table)|(?:show)|(?:help))",code.lower())
                 if m:
                     operation=m.group(1)
                 else:
@@ -208,7 +212,7 @@ class TaQLKernel(Kernel):
 
                 printcount=True
                 # Don't display row count in simple calc-like expressions
-                if operation=="show" or operation=="calc" or (operation=="select" and not('from' in code.lower())):
+                if operation=="show" or operation=="help" or operation=="calc" or (operation=="select" and not('from' in code.lower())):
                     printcount=False
 
                 if printcount:
