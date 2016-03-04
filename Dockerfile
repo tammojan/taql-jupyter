@@ -91,7 +91,7 @@ RUN cd ${INSTALLDIR}/casacore/build && make install
 #
 RUN mkdir ${INSTALLDIR}/python-casacore
 RUN cd ${INSTALLDIR}/python-casacore && git clone https://github.com/casacore/python-casacore
-RUN cd ${INSTALLDIR}/python-casacore/python-casacore && sed -i.bak -e '54,62d' setup.py
+RUN cd ${INSTALLDIR}/python-casacore/python-casacore && sed -i.bak -e '72,80d' setup.py
 RUN cd ${INSTALLDIR}/python-casacore/python-casacore && ./setup.py build_ext -I${INSTALLDIR}/casacore/include/ -L${INSTALLDIR}/casacore/lib/ -R${INSTALLDIR}/casacore/lib/
 RUN cd ${INSTALLDIR}/python-casacore/python-casacore && sudo ./setup.py install
 
