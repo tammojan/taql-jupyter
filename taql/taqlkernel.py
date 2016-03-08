@@ -125,7 +125,7 @@ class TaQLKernel(Kernel):
         # Print number of rows, but not for simple calc expressions
         if printcount or (t.nrows()>=100):
             out+=operation.capitalize()+" result of "+str(t.nrows())+" row"
-            if t.nrows()>1:
+            if t.nrows()!=1:
                 out+="s\n"
             else:
                 out+="\n"
