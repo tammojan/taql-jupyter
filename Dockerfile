@@ -57,7 +57,7 @@ RUN pip install pyfits pywcs python-monetdb
 RUN getent group sudo &>/dev/null || groupadd sudo
 RUN echo "useradd -m ${USERADD_FLAGS} ${USER}"
 RUN useradd -m -u ${UID} ${USER}
-RUN usermod -a -G sudo ${USER}
+# RUN usermod -a -G sudo ${USER}
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 RUN sed -i 's/requiretty/!requiretty/g' /etc/sudoers
 
@@ -77,15 +77,15 @@ RUN cd ${INSTALLDIR}/cfitsio/build && make install
 # install-casacore
 #
 RUN mkdir -p ${INSTALLDIR}/casacore/build
-RUN cd ${INSTALLDIR}/casacore && git clone --branch masktql https://github.com/gervandiepen/casacore.git src
+RUN cd ${INSTALLDIR}/casacore && git clone --branch masktaql https://github.com/casacore/casacore.git src
 RUN cd ${INSTALLDIR}/casacore/src && git pull
 RUN mkdir -p ${INSTALLDIR}/casacore/data
 RUN cd ${INSTALLDIR}/casacore/data && wget --retry-connrefused ftp://anonymous@ftp.astron.nl/outgoing/Measures/WSRT_Measures.ztar
 RUN cd ${INSTALLDIR}/casacore/data && tar xf WSRT_Measures.ztar
-RUN cd ${INSTALLDIR}/casacore/build && cmake -DCMAKE_INSTALL_PREFIX=${INSTALLDIR}/casacore/ -DDATA_DIR=${INSTALLDIR}/casacore/data -DCFITSIO_ROOT_DIR=${INSTALLDIR}/cfitsio/ -DBUILD_PYTHON=True -DUSE_OPENMP=True -DUSE_FFTW3=TRUE -DMODULE=ms -DCXX11=ON ../src/
+RUN cd ${INSTALLDIR}/casacore/build && cmake -DCMAKE_INSTALL_PREFIX=${INSTALLDIR}/casacore/ -DDATA_DIR=${INSTALLDIR}/casacore/data -DCFITSIO_ROOT_DIR=${INSTALLDIR}/cfitsio/ -DBUILD_PYTHON=True -DUSE_OPENMP=True -DUSE_FFTW3=TRUE -DMODULE=ms -DCXX11=ON -DBUILD_TESTING=False ../src/
 RUN cd ${INSTALLDIR}/casacore/build && make -j ${J}
 # Rebuild for latest changes
-RUN cd ${INSTALLDIR}/casacore/src &&  git pull
+RUN cd ${INSTALLDIR}/casacore/src && git pull 
 RUN cd ${INSTALLDIR}/casacore/build && make -j ${J}
 RUN cd ${INSTALLDIR}/casacore/build && make install
 
@@ -94,15 +94,17 @@ RUN cd ${INSTALLDIR}/casacore/build && make install
 #
 RUN mkdir ${INSTALLDIR}/python-casacore
 RUN cd ${INSTALLDIR}/python-casacore && git clone https://github.com/casacore/python-casacore
-RUN cd ${INSTALLDIR}/python-casacore/python-casacore && sed -i.bak -e '72,80d' setup.py
+RUN cd ${INSTALLDIR}/python-casacore/python-casacore && sed -i.bak -e '84,92d' setup.py
 RUN cd ${INSTALLDIR}/python-casacore/python-casacore && ./setup.py build_ext -I${INSTALLDIR}/casacore/include/ -L${INSTALLDIR}/casacore/lib/ -R${INSTALLDIR}/casacore/lib/
-RUN cd ${INSTALLDIR}/python-casacore/python-casacore && sudo ./setup.py install
+
+USER root
+RUN cd ${INSTALLDIR}/python-casacore/python-casacore && ./setup.py install
 
 #
 # install Jupyter
 #
-RUN sudo apt-get -y install python-zmq
-RUN sudo pip install jupyter
+RUN apt-get -y install python-zmq
+RUN pip install jupyter
 
 #
 # copied from jupyter/minimal-notebook
@@ -132,8 +134,8 @@ WORKDIR /home/${USER}/work
 # 
 RUN cd ${INSTALLDIR} && git clone https://github.com/tammojan/taql-jupyter
 ENV PYTHONPATH /home/lofar/opt/taql-jupyter
-RUN sudo mkdir -p /usr/local/share/jupyter/kernels
-RUN sudo ln -s /home/lofar/opt/taql-jupyter/taql /usr/local/share/jupyter/kernels
+RUN mkdir -p /usr/local/share/jupyter/kernels
+RUN ln -s /home/lofar/opt/taql-jupyter/taql /usr/local/share/jupyter/kernels
 
 RUN ln -s ${INSTALLDIR}/taql-jupyter/jupyter_notebook_config.py /home/${USER}/.jupyter/
 ENV NB_USER=${USER}
