@@ -77,7 +77,7 @@ RUN cd ${INSTALLDIR}/cfitsio/build && make install
 # install-casacore
 #
 RUN mkdir -p ${INSTALLDIR}/casacore/build
-RUN cd ${INSTALLDIR}/casacore && git clone --branch masktaql https://github.com/casacore/casacore.git src
+RUN cd ${INSTALLDIR}/casacore && git clone https://github.com/casacore/casacore.git src
 RUN cd ${INSTALLDIR}/casacore/src && git pull
 RUN mkdir -p ${INSTALLDIR}/casacore/data
 RUN cd ${INSTALLDIR}/casacore/data && wget --retry-connrefused ftp://anonymous@ftp.astron.nl/outgoing/Measures/WSRT_Measures.ztar
