@@ -15,6 +15,10 @@ ENV INSTALLDIR /home/${USER}/opt
 ENV DEBIAN_FRONTEND noninteractive
 ENV PYTHON_VERSION 2.7
 
+ENV DIRBASE taql-jupyter
+ENV REPO_ORG ygrange
+ENV REPO https://github.com/${REPO_ORG}/R{DIRBASE}
+
 #
 # versions
 #
@@ -100,30 +104,9 @@ RUN cd ${INSTALLDIR}/python-casacore/python-casacore && ./setup.py build_ext -I$
 USER root
 RUN cd ${INSTALLDIR}/python-casacore/python-casacore && ./setup.py install
 
-#
-# install Jupyter
-#
-RUN apt-get -y install python-zmq
-RUN pip install jupyter
-
-#
-# copied from jupyter/minimal-notebook
-#
-USER root
-RUN apt-get install -yq --no-install-recommends git vim wget build-essential ca-certificates bzip2 unzip libsm6 pandoc locales libxrender1
-RUN echo "en_US.UTF-8 UTF-8" > /etc/locale.gen
-RUN locale-gen "en_US.UTF-8"
-RUN wget --quiet https://github.com/krallin/tini/releases/download/v0.6.0/tini && echo "d5ed732199c36a1189320e6c4859f0169e950692f451c03e7854243b95f4234b *tini" | sha256sum -c - && mv tini /usr/local/bin/tini && chmod +x /usr/local/bin/tini
-ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-ENV SHELL=/bin/bash
-ENV NB_USER=${USER}
-ENV NB_UID=1000
-ENV LC_ALL=en_US.UTF-8
-ENV LANG=en_US.UTF-8
-ENV LANGUAGE=en_US.UTF-8
-
-USER ${USER}
-RUN mkdir /home/${USER}/work && mkdir /home/${USER}/.jupyter && mkdir /home/${USER}/.local
+# Install jupyterhub
+RUN apt-get install -yq python3-pip 
+RUN python3 -m pip install jupyterhub notebook
 
 USER root
 EXPOSE 8888/tcp
