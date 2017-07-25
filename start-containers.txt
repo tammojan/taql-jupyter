@@ -1,5 +1,0 @@
-export TOKEN=$( head -c 30 /dev/urandom | xxd -p )
-
-docker run --net=host -d -e CONFIGPROXY_AUTH_TOKEN=$TOKEN --name=proxy jupyter/configurable-http-proxy --default-target http://127.0.0.1:9999 --port 8000
-
-docker run --net=host -d -e CONFIGPROXY_AUTH_TOKEN=$TOKEN --name=tmpnb -v /var/run/docker.sock:/docker.sock jupyter/tmpnb python orchestrate.py --image=taql-jupyter --pool-size=30 --redirect-uri=/notebooks/LearnTaQL.ipynb --command="cd /home/lofar/opt/taql-jupyter && git pull && cd /home/lofar/work && start-notebook.sh --no-browser --port {port} --ip=0.0.0.0 --NotebookApp.base_url=/{base_path} --no-mathjax --config=/home/lofar/.jupyter/jupyter_notebook_config.py --NotebookApp.port_retries=0"
