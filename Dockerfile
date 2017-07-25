@@ -15,7 +15,7 @@ ENV INSTALLDIR /home/${USER}/opt
 ENV DEBIAN_FRONTEND noninteractive
 
 ENV DIRBASE taql-jupyter
-ENV REPO_ORG ygrange
+ENV REPO_ORG tammojan
 ENV REPO https://github.com/${REPO_ORG}/${DIRBASE}
 ENV BRANCH binder
 
