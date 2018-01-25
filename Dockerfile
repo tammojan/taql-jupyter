@@ -94,7 +94,7 @@ RUN cd ${INSTALLDIR}/casacore/build && make install
 #
 RUN mkdir ${INSTALLDIR}/python-casacore
 RUN cd ${INSTALLDIR}/python-casacore && git clone https://github.com/casacore/python-casacore
-RUN cd ${INSTALLDIR}/python-casacore/python-casacore && sed -i.bak -e '84,92d' setup.py
+RUN cd ${INSTALLDIR}/python-casacore/python-casacore && sed -i.bak -e '81,89d' setup.py
 RUN cd ${INSTALLDIR}/python-casacore/python-casacore && ./setup.py build_ext -I${INSTALLDIR}/casacore/include/ -L${INSTALLDIR}/casacore/lib/ -R${INSTALLDIR}/casacore/lib/
 
 USER root
@@ -104,6 +104,9 @@ RUN cd ${INSTALLDIR}/python-casacore/python-casacore && ./setup.py install
 # install Jupyter
 #
 RUN apt-get -y install python-zmq
+RUN apt-get remove -y python-pip python-setuptools python-pkg-resources
+RUN wget https://bootstrap.pypa.io/get-pip.py && python get-pip.py
+RUN pip install setuptools
 RUN pip install jupyter
 
 #
